@@ -11,7 +11,7 @@ A modern, fast, and uncluttered Chrome Extension for bookmark management, superc
 - **Intent Tags & Collections**: Categorize bookmarks with visual badges (e.g. `Read Later`, `Reference`, `Archive`).
 - **In-Browser Semantic Intelligence**: Built-in AI runs `@xenova/transformers` natively using WebAssembly to generate embeddings, allowing natural language search queries (e.g., "javascript graphing libraries") without relying on exact keyword matches.
 - **Privacy First Offline Processing**: All embedding modeling runs entirely locally on your device within an Offscreen Document and stores data incrementally in IndexedDB. Your browsing data never leaves your browser!
-- **Local API Support**: Easily toggle processing loads over to Ollama or standard OpenAI compatible `/v1/embeddings` models if you'd prefer to integrate a localized or self-hosted backend.
+- **Local API Support** (To Be Done): Easily toggle processing loads over to Ollama or standard OpenAI compatible `/v1/embeddings` models if you'd prefer to integrate a localized or self-hosted backend.
 
 ## Installation
 
