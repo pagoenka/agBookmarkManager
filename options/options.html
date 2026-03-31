@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>agBookmarkManager - Full view</title>
+  <link rel="stylesheet" href="../styles/shared.css">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Header/Search -->
+    <header class="top-nav flex items-center justify-between">
+      <div class="logo flex items-center gap-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span>agBookmarkManager</span>
+      </div>
+      <div class="search-container flex items-center gap-sm">
+        <div style="position: relative;">
+          <input type="text" id="search-input" class="input" placeholder="Search bookmarks by title or URL...">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+        </div>
+        <button id="semantic-toggle-btn" class="btn btn-icon" title="Toggle Semantic Search" style="filter: grayscale(1); transition: filter 0.2s;">✨</button>
+      </div>
+      <div style="width: 150px;" class="flex items-center gap-sm justify-end">
+        <div id="index-progress" class="text-sm text-muted hidden" style="font-size: 12px;">Indexing...</div>
+        <button id="ai-settings-btn" class="btn btn-icon" title="AI Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="main-body">
+      <!-- Sidebar (Intent Views & Collections) -->
+      <aside class="sidebar" id="sidebar">
+        <!-- Intent Views -->
+        <h2 class="section-title">Intent Views</h2>
+        <div id="intent-views-container" class="folder-tree" style="margin-bottom: 24px;">
+          <div class="folder-item intent-view" data-intent="read-later">
+            <span class="pill intent-read-later">R</span>
+            <span>Read Later</span>
+          </div>
+          <div class="folder-item intent-view" data-intent="watch-later">
+            <span class="pill intent-watch-later">W</span>
+            <span>Watch Later</span>
+          </div>
+          <div class="folder-item intent-view" data-intent="reference">
+            <span class="pill intent-reference">R</span>
+            <span>Reference</span>
+          </div>
+          <div class="folder-item intent-view" data-intent="archive">
+            <span class="pill intent-archive">A</span>
+            <span>Archive</span>
+          </div>
+        </div>
+
+        <h2 class="section-title">Collections</h2>
+        <div id="folders-container" class="folder-tree">
+          <!-- Folders populated by JS -->
+        </div>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="content">
+        <div class="content-header flex items-center justify-between">
+          <h2 id="current-folder-title">All Bookmarks</h2>
+          <button id="add-bookmark-btn" class="btn btn-primary" title="Add to current folder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            Add
+          </button>
+        </div>
+        
+        <div class="bookmarks-grid" id="bookmarks-container">
+          <!-- Bookmarks populated by JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M16 16s-1.5-2-4-2-4 2-4 2"></path>
+            <line x1="9" y1="9" x2="9.01" y2="9"></line>
+            <line x1="15" y1="9" x2="15.01" y2="9"></line>
+          </svg>
+          <p>No bookmarks found here.</p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Tagging Modal -->
+  <div id="tag-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2 class="modal-title">Edit Metadata</h2>
+      
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Intent Tag (Optional)</label>
+        <select id="modal-intent" class="input">
+          <option value="">None</option>
+          <option value="read-later">Read Later</option>
+          <option value="watch-later">Watch Later</option>
+          <option value="reference">Reference</option>
+          <option value="archive">Archive</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Tags (Comma separated)</label>
+        <input type="text" id="modal-tags" class="input" placeholder="e.g. design, tutorial, frontend">
+      </div>
+
+      <div class="modal-footer">
+        <button id="modal-cancel-btn" class="btn">Cancel</button>
+        <button id="modal-save-btn" class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Settings Modal -->
+  <div id="ai-settings-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <h2 class="modal-title">AI Settings</h2>
+      
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">AI Provider</label>
+        <select id="ai-provider-select" class="input">
+          <option value="browser">In-Browser Worker (Transformers.js)</option>
+          <option value="local">Local API (OpenAI Compatible via Ollama)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Endpoint URL</label>
+        <input type="text" id="ai-endpoint-input" class="input" placeholder="http://127.0.0.1:11434/v1/embeddings">
+        <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 4px;">Only used if Local API is selected. Expects OpenAI /v1/embeddings structure.</span>
+      </div>
+
+      <div class="modal-footer">
+        <button id="ai-modal-cancel-btn" class="btn">Cancel</button>
+        <button id="ai-modal-save-btn" class="btn btn-primary">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="options.js"></script>
+</body>
+</html>

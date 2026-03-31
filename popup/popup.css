@@ -1,0 +1,76 @@
+body {
+  width: 360px;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-surface);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header h1 {
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.add-bookmark-section {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.bookmarks-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-sm) 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Bookmark Item override for popup */
+.bookmark-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px var(--spacing-md);
+  transition: background-color 0.2s;
+  user-select: none;
+}
+.bookmark-item:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.bookmark-info {
+  margin-left: var(--spacing-sm);
+  overflow: hidden;
+  width: 100%;
+}
+
+.bookmark-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.bookmark-actions {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.bookmark-item:hover .bookmark-actions {
+  opacity: 1;
+}
+
+/* Fallback icons */
+.icon {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+}
