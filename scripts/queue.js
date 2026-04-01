@@ -125,8 +125,12 @@ export async function processQueue() {
   }
   
   processing = false;
-  totalItems = 0;
-  processedItems = 0;
-  console.log("Queue processing complete.");
-  chrome.runtime.sendMessage({ action: 'indexComplete' }).catch(() => {});
+  
+  // Only clear stats and send complete message if the queue is actually empty
+  if (queue.length === 0) {
+    totalItems = 0;
+    processedItems = 0;
+    console.log("Queue processing complete.");
+    chrome.runtime.sendMessage({ action: 'indexComplete' }).catch(() => {});
+  }
 }
