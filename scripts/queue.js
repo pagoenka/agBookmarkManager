@@ -5,8 +5,40 @@ import { fetchPageContent, parseHTMLOffline } from './extractor.js';
 
 let queue = [];
 let processing = false;
+let isPaused = false;
 let totalItems = 0;
 let processedItems = 0;
+
+// Initialize isPaused from storage on load
+chrome.storage.local.get(['isIndexPaused'], (res) => {
+  isPaused = res.isIndexPaused || false;
+});
+
+export function setPauseState(paused) {
+  isPaused = paused;
+  if (!isPaused && queue.length > 0 && !processing) {
+    processQueue();
+  }
+}
+
+export function getQueueState() {
+  return {
+    queueLength: queue.length,
+    totalItems,
+    processedItems,
+    isPaused,
+    processing
+  };
+}
+
+export function removeFromQueue(id) {
+  const initialLength = queue.length;
+  queue = queue.filter(bm => bm.id !== id);
+  if (queue.length < initialLength) {
+    if (totalItems > 0) totalItems--;
+    console.log(`Removed bookmark ${id} from queue.`);
+  }
+}
 
 export function addToQueue(bookmark) {
   // If the bookmark already exists in the queue (e.g. from multiple events), 
@@ -21,19 +53,23 @@ export function addToQueue(bookmark) {
   // Update total tracker in a simple way
   if (totalItems < queue.length) totalItems = queue.length;
 
-  if (!processing) {
+  if (!processing && !isPaused) {
     processedItems = 0;
     processQueue();
   }
 }
 
 export async function processQueue() {
-  if (processing || queue.length === 0) return;
+  if (processing || queue.length === 0 || isPaused) return;
   processing = true;
   if (totalItems < queue.length) totalItems = queue.length;
   console.log(`Starting queue. ${queue.length} items remaining. Total batch: ${totalItems}`);
 
   while(queue.length > 0) {
+    if (isPaused) {
+      console.log("Indexing paused. Stopping queue processing.");
+      break;
+    }
     const bm = queue.shift();
     try {
       // 1. Check if we have an embedding already

@@ -91,3 +91,16 @@ export async function getBookmarksByTag(tag) {
     });
   });
 }
+
+/**
+ * Delete metadata for a specific bookmark ID
+ * @param {string} bookmarkId 
+ */
+export async function deleteBookmarkMeta(bookmarkId) {
+  const key = getMetadataKey(bookmarkId);
+  return new Promise((resolve) => {
+    chrome.storage.local.remove([key], () => {
+      resolve();
+    });
+  });
+}

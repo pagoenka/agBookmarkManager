@@ -2,12 +2,18 @@
 // Background utility for fetching and preparing content for indexing
 import { ensureOffscreenDocument } from './offscreen-manager.js';
 
+const MAX_HTML_SIZE = 2 * 1024 * 1024; // 2MB limit for Chrome sendMessage
+
 /**
  * Fetches the HTML content of a URL
  * @param {string} url 
  * @returns {Promise<string|null>}
  */
 export async function fetchPageContent(url) {
+  if (!url || url.startsWith('chrome://') || url.startsWith('about:')) {
+    console.info(`Extractor: Skipping internal/system URL: ${url}`);
+    return null;
+  }
   try {
     const response = await fetch(url, {
        // Best-effort to look like a browser to avoid some simple blocks
@@ -17,12 +23,24 @@ export async function fetchPageContent(url) {
     });
     
     if (!response.ok) {
-      throw new Error(`Fetch failed with status: ${response.status}`);
+      if (response.status === 404) {
+        console.warn(`Extractor: Broken link (404) for ${url}. Skipping.`);
+      } else {
+        throw new Error(`Fetch failed with status: ${response.status}`);
+      }
+      return null;
     }
     
-    return await response.text();
+    const text = await response.text();
+    return text;
   } catch (err) {
-    console.error(`Extractor: Failed to fetch ${url}`, err);
+    if (err.name === 'TypeError' && (err.message === 'Failed to fetch' || err.message.includes('fetch'))) {
+      // Catch-all for CORS, Connection Refused, Offline, DNS failure, etc.
+      console.warn(`Extractor: Could not reach content at ${url}. It may be private, internal, or blocking automated access. (TypeError: Failed to fetch)`);
+    } else {
+      // Log genuine unexpected errors as actual errors
+      console.error(`Extractor: Unexpected error fetching ${url}`, err);
+    }
     return null;
   }
 }
@@ -35,10 +53,17 @@ export async function fetchPageContent(url) {
 export async function parseHTMLOffline(html) {
   try {
     await ensureOffscreenDocument();
+    
+    let safeHtml = html;
+    if (html && html.length > MAX_HTML_SIZE) {
+      console.warn(`Extractor: HTML too large (${(html.length / 1024 / 1024).toFixed(2)}MB). Truncating to 2MB.`);
+      safeHtml = html.substring(0, MAX_HTML_SIZE);
+    }
+
     const response = await chrome.runtime.sendMessage({
       target: 'offscreen',
       action: 'parseHTML',
-      html: html
+      html: safeHtml
     });
     
     if (response && response.success) {

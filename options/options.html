@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>agBookmarkManager - Full view</title>
   <link rel="stylesheet" href="../styles/shared.css">
   <link rel="stylesheet" href="options.css">
 </head>
+
 <body>
   <div class="app-layout">
     <!-- Header/Search -->
     <header class="top-nav flex items-center justify-between">
       <div class="logo flex items-center gap-sm">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)"
+          stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
         </svg>
         <span>agBookmarkManager</span>
@@ -19,17 +22,37 @@
       <div class="search-container flex items-center gap-sm">
         <div style="position: relative;">
           <input type="text" id="search-input" class="input" placeholder="Search bookmarks by title or URL...">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
         </div>
-        <button id="semantic-toggle-btn" class="btn btn-icon" title="Toggle Semantic Search" style="filter: grayscale(1); transition: filter 0.2s;">✨</button>
+        <button id="semantic-toggle-btn" class="btn btn-icon" title="Toggle Semantic Search"
+          style="filter: grayscale(1); transition: filter 0.2s;">✨</button>
       </div>
-      <div style="width: 150px;" class="flex items-center gap-sm justify-end">
+      <div style="width: 250px;" class="flex items-center gap-sm justify-end">
         <div id="index-progress" class="text-sm text-muted hidden" style="font-size: 12px;">Indexing...</div>
+        <button id="pause-resume-btn" class="btn btn-icon hidden" title="Pause Indexing">
+          <svg id="pause-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+          <svg id="resume-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
         <button id="ai-settings-btn" class="btn btn-icon" title="AI Settings">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+            </path>
+          </svg>
         </button>
       </div>
     </header>
@@ -69,21 +92,23 @@
         <div class="content-header flex items-center justify-between">
           <h2 id="current-folder-title">All Bookmarks</h2>
           <button id="add-bookmark-btn" class="btn btn-primary" title="Add to current folder">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
             Add
           </button>
         </div>
-        
+
         <div class="bookmarks-grid" id="bookmarks-container">
           <!-- Bookmarks populated by JS -->
         </div>
 
         <!-- Empty State -->
         <div id="empty-state" class="empty-state hidden">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M16 16s-1.5-2-4-2-4 2-4 2"></path>
             <line x1="9" y1="9" x2="9.01" y2="9"></line>
@@ -99,9 +124,10 @@
   <div id="tag-modal" class="modal-overlay hidden">
     <div class="modal-content">
       <h2 class="modal-title">Edit Metadata</h2>
-      
+
       <div style="margin-bottom: 16px;">
-        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Intent Tag (Optional)</label>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Intent Tag
+          (Optional)</label>
         <select id="modal-intent" class="input">
           <option value="">None</option>
           <option value="read-later">Read Later</option>
@@ -112,12 +138,14 @@
       </div>
 
       <div>
-        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Tags (Comma separated)</label>
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Tags (Comma
+          separated)</label>
         <input type="text" id="modal-tags" class="input" placeholder="e.g. design, tutorial, frontend">
       </div>
 
       <div id="suggested-tags-container" class="hidden" style="margin-top: 12px;">
-        <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px; color: var(--muted);">AI Suggested Tags</label>
+        <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 12px; color: var(--muted);">AI
+          Suggested Tags</label>
         <div id="suggested-tags-list" class="flex flex-wrap gap-xs"></div>
       </div>
 
@@ -132,7 +160,7 @@
   <div id="ai-settings-modal" class="modal-overlay hidden">
     <div class="modal-content">
       <h2 class="modal-title">AI Settings</h2>
-      
+
       <div style="margin-bottom: 16px;">
         <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">AI Provider</label>
         <select id="ai-provider-select" class="input">
@@ -144,7 +172,8 @@
       <div style="margin-bottom: 16px;">
         <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Endpoint URL</label>
         <div class="flex gap-sm">
-          <input type="text" id="ai-endpoint-input" class="input" style="flex: 1;" placeholder="http://127.0.0.1:11434/v1/embeddings">
+          <input type="text" id="ai-endpoint-input" class="input" style="flex: 1;"
+            placeholder="http://127.0.0.1:11434/v1/embeddings">
           <button id="ai-test-connection-btn" class="btn">Test</button>
         </div>
         <span id="ai-test-result" style="font-size: 11px; display: block; margin-top: 4px;"></span>
@@ -164,7 +193,8 @@
       <div style="margin-bottom: 24px;">
         <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">API Key (Optional)</label>
         <input type="password" id="ai-api-key-input" class="input" placeholder="sk-...">
-        <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 4px;">Required for providers like OpenAI. Stored locally.</span>
+        <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 4px;">Required for providers like
+          OpenAI. Stored locally.</span>
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 16px;">
@@ -173,7 +203,8 @@
           <input type="checkbox" id="auto-index-checkbox">
           <span>Automatically index active bookmarks (Silent Mode)</span>
         </label>
-        <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 4px; margin-left: 24px;">If disabled, the extension will ask for permission before indexing a page you visit.</span>
+        <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 4px; margin-left: 24px;">If
+          disabled, the extension will ask for permission before indexing a page you visit.</span>
       </div>
 
       <div class="modal-footer" style="justify-content: space-between;">
@@ -188,4 +219,5 @@
 
   <script type="module" src="options.js"></script>
 </body>
+
 </html>

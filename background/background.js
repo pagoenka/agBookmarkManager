@@ -1,8 +1,9 @@
 // background.js
 
-import { getEmbedding } from '../scripts/db.js';
-import { processQueue, addToQueue } from '../scripts/queue.js';
+import { getEmbedding, deleteEmbedding } from '../scripts/db.js';
+import { processQueue, addToQueue, setPauseState, getQueueState, removeFromQueue } from '../scripts/queue.js';
 import { flattenBookmarks } from '../scripts/utils.js';
+import { deleteBookmarkMeta } from '../scripts/storage.js';
 import { testEndpoint } from '../scripts/llm.js';
 import { ensureOffscreenDocument } from '../scripts/offscreen-manager.js';
 
@@ -42,6 +43,13 @@ chrome.bookmarks.onCreated.addListener((id, bookmark) => {
   if (bookmark.url) {
     addToQueue(bookmark);
   }
+});
+
+chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
+  console.log(`Bookmark ${id} removed. Cleaning up...`);
+  removeFromQueue(id);
+  await deleteEmbedding(id);
+  await deleteBookmarkMeta(id);
 });
 
 chrome.bookmarks.onChanged.addListener((id, changeInfo) => {
@@ -87,11 +95,10 @@ async function queueAllUnprocessedBookmarks() {
   });
 }
 
-// Ensure the queue processes periodically or handles UI messages
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'getStatus') {
+  if (request.action === 'getStatus' || request.action === 'getProgress') {
     // Allows Options page to ask for queue status
-    sendResponse({ status: 'ok' });
+    sendResponse(getQueueState());
   } else if (request.action === 'startProcessing') {
     queueAllUnprocessedBookmarks();
     sendResponse({ started: true });
@@ -120,5 +127,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(res => sendResponse(res))
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true; // async
+  } else if (request.action === 'pauseIndexing') {
+    setPauseState(true);
+    sendResponse({ success: true });
+  } else if (request.action === 'resumeIndexing') {
+    setPauseState(false);
+    sendResponse({ success: true });
   }
 });

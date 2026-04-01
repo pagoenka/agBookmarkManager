@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiSettingsBtn = document.getElementById('ai-settings-btn');
   const semanticToggleBtn = document.getElementById('semantic-toggle-btn');
   const indexProgress = document.getElementById('index-progress');
+  const pauseResumeBtn = document.getElementById('pause-resume-btn');
+  const pauseIcon = document.getElementById('pause-icon');
+  const resumeIcon = document.getElementById('resume-icon');
 
   // AI Modal Elements
   const aiModal = document.getElementById('ai-settings-modal');
@@ -32,6 +35,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiReindexBtn = document.getElementById('ai-reindex-btn');
 
   let isSemanticSearch = true;
+  let isIndexPaused = false;
+
+  // Initialize Pause/Resume state
+  chrome.storage.local.get(['isIndexPaused'], (res) => {
+    isIndexPaused = res.isIndexPaused || false;
+    // updatePauseResumeUI initialized on load if button is present
+    if (pauseResumeBtn) updatePauseResumeUI();
+  });
 
   // Modal Elements
   const modal = document.getElementById('tag-modal');
@@ -48,6 +59,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load Tree
   await renderSidebar();
   await loadFolderContents(activeFolderId);
+
+  // Check current indexing status on load
+  chrome.runtime.sendMessage({ action: 'getStatus' }, (state) => {
+    if (state && (state.processing || state.queueLength > 0 || state.isPaused)) {
+      updateProgressUI(state);
+    }
+  });
 
   // Intent Views Logic
   document.querySelectorAll('.intent-view').forEach(el => {
@@ -267,25 +285,69 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Listen to background queue progress
   chrome.runtime.onMessage.addListener(msg => {
     if (msg.action === 'indexProgress') {
-      indexProgress.classList.remove('hidden');
-      const percent = msg.total > 0 ? Math.round((msg.processed / msg.total) * 100) : 0;
-      indexProgress.innerHTML = `
-        <div class="flex items-center justify-between" style="margin-bottom: 4px;">
-           <div class="flex items-center gap-sm">
-             <div class="spinner-sm"></div>
-             <span style="font-weight: 600;">Indexing: ${percent}%</span>
-           </div>
-           <span style="font-size: 11px;">${msg.processed} / ${msg.total}</span>
-        </div>
-        <div class="progress-container">
-          <div class="progress-bar" style="width: ${percent}%"></div>
-        </div>
-      `;
+      updateProgressUI(msg);
     } else if (msg.action === 'indexComplete') {
       indexProgress.innerHTML = `<span style="color: var(--success); font-weight: 600;">✓ Indexing Complete!</span>`;
+      if (pauseResumeBtn) pauseResumeBtn.classList.add('hidden');
       setTimeout(() => indexProgress.classList.add('hidden'), 5000);
     }
   });
+
+  function updateProgressUI(state) {
+    if (!indexProgress) return;
+    indexProgress.classList.remove('hidden');
+    if (pauseResumeBtn) pauseResumeBtn.classList.remove('hidden');
+    
+    // Use stored pause state if available, otherwise from message
+    const paused = typeof state.isPaused !== 'undefined' ? state.isPaused : isIndexPaused;
+    
+    const percent = state.total > 0 ? Math.round((state.processed / state.total) * 100) : 
+                   (state.totalItems > 0 ? Math.round((state.processedItems / state.totalItems) * 100) : 0);
+    
+    const processed = state.processed || state.processedItems || 0;
+    const total = state.total || state.totalItems || 0;
+
+    indexProgress.innerHTML = `
+      <div class="flex items-center justify-between" style="margin-bottom: 4px;">
+         <div class="flex items-center gap-sm">
+           <div class="${paused ? 'pause-indicator' : 'spinner-sm'}"></div>
+           <span style="font-weight: 600;">${paused ? 'Paused' : 'Indexing'}: ${percent}%</span>
+         </div>
+         <span style="font-size: 11px;">${processed} / ${total}</span>
+      </div>
+      <div class="progress-container">
+        <div class="progress-bar" style="width: ${percent}%"></div>
+      </div>
+    `;
+  }
+
+  // Pause/Resume Logic
+  if (pauseResumeBtn) {
+    pauseResumeBtn.addEventListener('click', () => {
+      isIndexPaused = !isIndexPaused;
+      chrome.storage.local.set({ isIndexPaused });
+      updatePauseResumeUI();
+
+      const action = isIndexPaused ? 'pauseIndexing' : 'resumeIndexing';
+      chrome.runtime.sendMessage({ action });
+      
+      // Request progress update to refresh UI
+      chrome.runtime.sendMessage({ action: 'getProgress' });
+    });
+  }
+
+  function updatePauseResumeUI() {
+    if (!pauseResumeBtn) return;
+    if (isIndexPaused) {
+      pauseIcon.classList.add('hidden');
+      resumeIcon.classList.remove('hidden');
+      pauseResumeBtn.title = 'Resume Indexing';
+    } else {
+      pauseIcon.classList.remove('hidden');
+      resumeIcon.classList.add('hidden');
+      pauseResumeBtn.title = 'Pause Indexing';
+    }
+  }
 
   async function openEditModal(bookmark, currentMeta) {
     currentlyEditingBookmarkId = bookmark.id;
@@ -356,10 +418,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       fDiv.style.paddingLeft = `${Math.max(8, folder.depth * 16)}px`;
       
       fDiv.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
-        </svg>
-        <span>${titleStr}</span>
+        <div class="flex items-center gap-sm flex-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+          </svg>
+          <span>${titleStr}</span>
+        </div>
+        <button class="folder-delete-btn" title="Delete Folder">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+        </button>
       `;
 
       fDiv.addEventListener('click', async () => {
@@ -370,6 +437,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         activeFolderId = folder.id;
         searchInput.value = ''; // clear search when switching
         await loadFolderContents(activeFolderId);
+      });
+
+      const deleteBtn = fDiv.querySelector('.folder-delete-btn');
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // Don't trigger the folder click
+        const id = folder.id;
+        const title = titleStr;
+        if (confirm(`Are you sure you want to delete the "${title}" collection and all its bookmarks?`)) {
+          chrome.bookmarks.removeTree(id, () => {
+            renderSidebar();
+            if (activeFolderId === id) {
+              loadFolderContents('1'); // Go back to root
+            }
+          });
+        }
       });
 
       fragment.appendChild(fDiv);
