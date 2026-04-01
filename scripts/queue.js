@@ -118,8 +118,10 @@ export async function processQueue() {
       processed: processedItems
     }).catch(() => {});
     
-    // Small delay to prevent blocking
-    await new Promise(r => setTimeout(r, 100));
+    // Polite Indexing: Add a randomized delay (jitter) to mimic human-like timing
+    // Range: 1s to 2.5s (1000ms base + up to 1500ms random)
+    const jitter = Math.floor(Math.random() * 1500) + 1000;
+    await new Promise(r => setTimeout(r, jitter));
   }
   
   processing = false;
