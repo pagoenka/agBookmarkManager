@@ -1,6 +1,8 @@
 import { getBookmarksMeta, saveBookmarkMeta, getBookmarksByIntent } from '../scripts/storage.js';
 import { flattenBookmarks, createBookmarkElement } from '../scripts/utils.js';
 import { semanticSearch } from '../scripts/vector.js';
+import { getEmbedding, clearAllEmbeddings } from '../scripts/db.js';
+import { testEndpoint } from '../scripts/llm.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   const foldersContainer = document.getElementById('folders-container');
@@ -19,15 +21,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiModal = document.getElementById('ai-settings-modal');
   const aiProviderSelect = document.getElementById('ai-provider-select');
   const aiEndpointInput = document.getElementById('ai-endpoint-input');
+  const aiModelEmbedInput = document.getElementById('ai-model-embed-input');
+  const aiModelChatInput = document.getElementById('ai-model-chat-input');
+  const aiApiKeyInput = document.getElementById('ai-api-key-input');
+  const autoIndexCheckbox = document.getElementById('auto-index-checkbox');
   const aiModalCancel = document.getElementById('ai-modal-cancel-btn');
   const aiModalSave = document.getElementById('ai-modal-save-btn');
+  const aiTestBtn = document.getElementById('ai-test-connection-btn');
+  const aiTestResult = document.getElementById('ai-test-result');
+  const aiReindexBtn = document.getElementById('ai-reindex-btn');
 
-  let isSemanticSearch = false;
+  let isSemanticSearch = true;
 
   // Modal Elements
   const modal = document.getElementById('tag-modal');
   const modalIntent = document.getElementById('modal-intent');
   const modalTags = document.getElementById('modal-tags');
+  const suggestedTagsContainer = document.getElementById('suggested-tags-container');
+  const suggestedTagsList = document.getElementById('suggested-tags-list');
   const modalCancel = document.getElementById('modal-cancel-btn');
   const modalSave = document.getElementById('modal-save-btn');
   let currentlyEditingBookmarkId = null;
@@ -108,6 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Semantic Toggle
+  semanticToggleBtn.style.filter = isSemanticSearch ? 'grayscale(0)' : 'grayscale(1)';
   semanticToggleBtn.addEventListener('click', () => {
     isSemanticSearch = !isSemanticSearch;
     semanticToggleBtn.style.filter = isSemanticSearch ? 'grayscale(0)' : 'grayscale(1)';
@@ -156,10 +168,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // AI Settings Modal Logic
   aiSettingsBtn.addEventListener('click', () => {
-    chrome.storage.sync.get(['aiProvider', 'aiEndpoint'], res => {
+    chrome.storage.sync.get(['aiProvider', 'aiEndpoint', 'aiApiKey', 'aiModelEmbed', 'aiModelChat'], res => {
       aiProviderSelect.value = res.aiProvider || 'browser';
       aiEndpointInput.value = res.aiEndpoint || 'http://127.0.0.1:11434/v1/embeddings';
-      aiModal.classList.remove('hidden');
+      aiApiKeyInput.value = res.aiApiKey || '';
+      aiModelEmbedInput.value = res.aiModelEmbed || 'nomic-embed-text';
+      aiModelChatInput.value = res.aiModelChat || 'llama3';
+      
+      chrome.storage.local.get(['isAutoIndexEnabled'], localRes => {
+        autoIndexCheckbox.checked = localRes.isAutoIndexEnabled || false;
+        aiModal.classList.remove('hidden');
+      });
     });
   });
 
@@ -168,30 +187,134 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   aiModalSave.addEventListener('click', () => {
-    chrome.storage.sync.set({
-      aiProvider: aiProviderSelect.value,
-      aiEndpoint: aiEndpointInput.value
-    }, () => {
-      aiModal.classList.add('hidden');
-      alert('AI Settings Saved!');
+    const newProvider = aiProviderSelect.value;
+    const newEndpoint = aiEndpointInput.value;
+    const newModelEmbed = aiModelEmbedInput.value;
+    const newModelChat = aiModelChatInput.value;
+    const newApiKey = aiApiKeyInput.value;
+
+    chrome.storage.sync.get(['aiProvider', 'aiEndpoint'], async (res) => {
+      const providerChanged = res.aiProvider !== newProvider;
+      const endpointChanged = res.aiEndpoint !== newEndpoint;
+
+      if (providerChanged || endpointChanged) {
+        const confirmSwitch = confirm('Switching AI providers or endpoints will make your current search index incompatible. Would you like to clear the current index and prepare for re-indexing?');
+        if (confirmSwitch) {
+            await clearAllEmbeddings();
+        }
+      }
+
+      // Save sync settings
+      chrome.storage.sync.set({
+        aiProvider: newProvider,
+        aiEndpoint: newEndpoint,
+        aiModelEmbed: newModelEmbed,
+        aiModelChat: newModelChat,
+        aiApiKey: newApiKey
+      });
+
+      // Save local privacy settings
+      chrome.storage.local.set({
+        isAutoIndexEnabled: autoIndexCheckbox.checked
+      }, () => {
+        aiModal.classList.add('hidden');
+        
+        // Trigger background processing immediately
+        chrome.runtime.sendMessage({ action: 'startProcessing' }, (resp) => {
+          console.log("Indexing started:", resp);
+          alert('AI Settings Saved! Indexing has started in the background.');
+          location.reload();
+        });
+      });
     });
+  });
+
+  // AI Test Connection Logic
+  aiTestBtn.addEventListener('click', async () => {
+    const endpoint = aiEndpointInput.value;
+    const apiKey = aiApiKeyInput.value;
+    
+    aiTestResult.textContent = 'Testing connection...';
+    aiTestResult.style.color = 'var(--text-muted)';
+    
+    chrome.runtime.sendMessage({ action: 'testConnection', endpoint, apiKey }, (result) => {
+      if (result && result.success) {
+        aiTestResult.textContent = '✓ Connection successful!';
+        aiTestResult.style.color = 'var(--success)';
+      } else {
+        const err = result ? result.error : 'Unknown error';
+        aiTestResult.textContent = `✗ Failed: ${err}`;
+        aiTestResult.style.color = '#ef4444';
+        
+        if (err.includes('403')) {
+          aiTestResult.innerHTML += `<br/><span style="color: var(--text-muted); font-size: 10px;">Ollama might need OLLAMA_ORIGINS="chrome-extension://*" set.</span>`;
+        }
+      }
+    });
+  });
+
+  // Re-index All Logic
+  aiReindexBtn.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to RE-INDEX all bookmarks? This will clear the current index and start over.')) {
+      await clearAllEmbeddings();
+      aiModal.classList.add('hidden');
+      chrome.runtime.sendMessage({ action: 'startProcessing' });
+      alert('Index cleared. Starting full re-index...');
+      location.reload();
+    }
   });
 
   // Listen to background queue progress
   chrome.runtime.onMessage.addListener(msg => {
     if (msg.action === 'indexProgress') {
       indexProgress.classList.remove('hidden');
-      indexProgress.textContent = `Indexing: ${msg.remaining} left`;
+      const percent = msg.total > 0 ? Math.round((msg.processed / msg.total) * 100) : 0;
+      indexProgress.innerHTML = `
+        <div class="flex items-center justify-between" style="margin-bottom: 4px;">
+           <div class="flex items-center gap-sm">
+             <div class="spinner-sm"></div>
+             <span style="font-weight: 600;">Indexing: ${percent}%</span>
+           </div>
+           <span style="font-size: 11px;">${msg.processed} / ${msg.total}</span>
+        </div>
+        <div class="progress-container">
+          <div class="progress-bar" style="width: ${percent}%"></div>
+        </div>
+      `;
     } else if (msg.action === 'indexComplete') {
-      indexProgress.classList.add('hidden');
-      indexProgress.textContent = 'Indexing Complete!';
+      indexProgress.innerHTML = `<span style="color: var(--success); font-weight: 600;">✓ Indexing Complete!</span>`;
+      setTimeout(() => indexProgress.classList.add('hidden'), 5000);
     }
   });
 
-  function openEditModal(bookmark, currentMeta) {
+  async function openEditModal(bookmark, currentMeta) {
     currentlyEditingBookmarkId = bookmark.id;
     modalIntent.value = currentMeta.intent || '';
     modalTags.value = currentMeta.tags ? currentMeta.tags.join(', ') : '';
+    
+    // Check for AI Suggested Tags (Phase 4)
+    suggestedTagsList.innerHTML = '';
+    suggestedTagsContainer.classList.add('hidden');
+    
+    const dbEntry = await getEmbedding(bookmark.id);
+    if (dbEntry && dbEntry.suggestedTags && dbEntry.suggestedTags.length > 0) {
+      dbEntry.suggestedTags.forEach(tag => {
+        const span = document.createElement('span');
+        span.className = 'pill';
+        span.style.cursor = 'pointer';
+        span.textContent = `+ ${tag}`;
+        span.addEventListener('click', () => {
+          const currentTags = modalTags.value.split(',').map(t => t.trim()).filter(Boolean);
+          if (!currentTags.includes(tag)) {
+            currentTags.push(tag);
+            modalTags.value = currentTags.join(', ');
+          }
+        });
+        suggestedTagsList.appendChild(span);
+      });
+      suggestedTagsContainer.classList.remove('hidden');
+    }
+
     modal.classList.remove('hidden');
   }
 
@@ -279,17 +402,25 @@ document.addEventListener('DOMContentLoaded', async () => {
       const metaMap = await getBookmarksMeta(ids);
       
       const fragment = document.createDocumentFragment();
-      bookmarks.forEach(bm => {
-        const meta = metaMap[bm.id];
+      for (const bm of bookmarks) {
+        const meta = metaMap[bm.id] || { tags: [], intent: null };
+        
+        // Fetch Phase 4 Intelligence (Summary)
+        const dbEntry = await getEmbedding(bm.id);
+        const enrichedMeta = { ...meta };
+        if (dbEntry && dbEntry.summary) {
+          enrichedMeta.summary = dbEntry.summary;
+        }
+
         // use onDelete callback to remove from UI and show empty state if needed
-        const el = createBookmarkElement(bm, meta, (deletedId) => {
-          if (bookmarksContainer.children.length === 1) {
-            emptyState.classList.remove('hidden');
-          }
-        }, openEditModal);
+        const el = createBookmarkElement(bm, enrichedMeta, (deletedId) => {
+        if (bookmarksContainer.children.length === 1) {
+          emptyState.classList.remove('hidden');
+        }
+      }, openEditModal);
         
         fragment.appendChild(el);
-      });
+      }
       bookmarksContainer.appendChild(fragment);
     }
   }

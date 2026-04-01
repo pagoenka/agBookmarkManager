@@ -66,6 +66,22 @@ function createBookmarkElement(bookmark, meta = { tags: [], intent: null }, onDe
   info.appendChild(title);
   info.appendChild(urlParams);
 
+  // Render Summary (Phase 4)
+  if (meta.summary) {
+    const summary = document.createElement('p');
+    summary.className = 'bookmark-summary';
+    summary.style.marginTop = '4px';
+    summary.style.fontSize = '12px';
+    summary.style.color = '#6b7280'; // Gray 500
+    summary.style.fontStyle = 'italic';
+    summary.style.display = '-webkit-box';
+    summary.style.webkitLineClamp = '2';
+    summary.style.webkitBoxOrient = 'vertical';
+    summary.style.overflow = 'hidden';
+    summary.textContent = meta.summary;
+    info.appendChild(summary);
+  }
+
   // Render Pills (Phase 2)
   if ((meta.tags && meta.tags.length > 0) || meta.intent) {
     const pillContainer = document.createElement('div');

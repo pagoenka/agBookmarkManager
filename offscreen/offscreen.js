@@ -43,4 +43,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // Keep message channel open for async response
   }
+
+  if (request.action === 'parseHTML') {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(request.html, 'text/html');
+      
+      const title = doc.title || '';
+      const metaDescription = doc.querySelector('meta[name="description"]')?.getAttribute('content') || '';
+      
+      // Clean up junk
+      const selectorsToRemove = ['script', 'style', 'noscript', 'iframe', 'canvas', 'svg', 'nav', 'header', 'footer', 'aside'];
+      selectorsToRemove.forEach(s => {
+        doc.querySelectorAll(s).forEach(el => el.remove());
+      });
+      
+      const text = doc.body.innerText.replace(/\s+/g, ' ').trim();
+      
+      sendResponse({ 
+        success: true, 
+        text, 
+        title, 
+        description: metaDescription 
+      });
+    } catch (e) {
+      sendResponse({ success: false, error: e.message });
+    }
+    return true;
+  }
 });

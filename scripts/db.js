@@ -34,7 +34,7 @@ async function initDB() {
 /**
  * Save an embedding and plain text for a bookmark
  * @param {string} id - Bookmark ID
- * @param {object} data - { embedding: number[], text: string, title: string, url: string }
+ * @param {object} data - { embedding: number[], text: string, title: string, url: string, summary?: string, suggestedTags?: string[] }
  */
 export async function saveEmbedding(id, data) {
   const db = await initDB();

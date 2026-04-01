@@ -18,7 +18,35 @@ A Chrome Extension that serves as a full-featured bookmark manager. Users can vi
 |-------|-------|--------|
 | Phase 1 | Chrome Extension — Core Bookmark Manager | ✅ Completed |
 | Phase 2 | Tags, Intent Tags, and Collections | 🟡 In Progress |
-| Phase 3 | AI-Powered Search and Intelligence | ⏳ Planned |
+| Phase 3 | AI-Powered Search and Intelligence | 🟡 In Progress |
+| Phase 4 | Deep Content Intelligence | ⏳ Planned |
+## Phase 4 — Deep Content Intelligence
+
+### Goal
+Enhance semantic search by indexing the full-page text of bookmarked URLs, enabling discovery beyond just Title and URL matching.
+
+### Features
+1. **Full-Page Text Extraction**: Implement background fetching and DOM parsing (via Offscreen document) to extract primary article text (cleaning out nav, scripts, and footers).
+2. **Content-Based Semantic Search**: Generate embeddings based on the combination of Title, Meta Description, and extracted page content (truncated to fit model token limits, e.g., ~2000 chars).
+3. **Local/Remote LLM Hybrid**: Support using Local Ollama or OpenAI APIs for generating embeddings and intelligence from larger text blocks while keeping all resulting data in the browser's IndexedDB.
+4. **Auto-Summarization**: Generate a brief AI summary of the bookmarked page content to be displayed in the UI (e.g. on hover or in a detail view).
+5. **AI Tag Suggestions**: Analyze extracted page content to automatically suggest relevant tags for the bookmark, streamlining user organization.
+6. **Secure API Authentication**: Provision for API keys (e.g. OpenAI) in settings, used securely for generation requests without leaking to external storage.
+7. **Model Migration & Data Integrity**: Detection of LLM provider or endpoint changes with a user-facing warning and automated "Rebuild Index" process to prevent vector dimension mismatch.
+8. **Auth & Paywall Handling**: Implement a Content Script strategy to prioritize "Clean Text" extraction from active user sessions, bypassing background fetch limitations for authenticated or paywalled pages.
+9. **User Consent & Transparency**: Provide a clear notification (Toast/Banner) when active extraction occurs. Allow users to grant one-time consent or permanent opt-in for background indexing of active tabs.
+10. **Content Cache**: Store the extracted text locally to support these intelligence features without re-fetching.
+
+### Technical Considerations
+- **Permissions**: Requires `<all_urls>` host permission for background fetching and active content script extraction.
+- **Transparency**: Content scripts must provide an in-page UI (Toast/Notification) to inform the user when their active context is being indexed, ensuring privacy awareness.
+- **Consent**: Implement a "Permission Priming" workflow where the user can opt-in to automatic background indexing.
+- **Auth**: Implement an "API Key" field in settings to support authenticated requests to OpenAI or custom LLM endpoints.
+- **Data Integrity**: Implement logic to detect when the underlying embedding model has changed and prompt the user to purge/re-index to ensure search accuracy.
+- **Token Management**: Standard models like `all-MiniLM-L6-v2` have a 512-token limit; intelligent truncation will be needed to capture the most relevant parts of the page.
+
+---
+
 ## Phase 3 — AI-Powered Search and Intelligence
 
 ### Goal

@@ -4,10 +4,17 @@
   "version": "1.0",
   "description": "Modern, fast, and uncluttered Chrome Bookmark Manager.",
   "permissions": ["bookmarks", "storage", "unlimitedStorage", "offscreen"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background/background.js",
     "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["scripts/content.js"]
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
   },
