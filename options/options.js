@@ -113,12 +113,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                return;
             }
             
-            // Fetch full bookmarks context
+            // Fetch full bookmarks context safely
             const ids = resultsBase.map(r => r.id);
-            chrome.bookmarks.get(ids, (fullBookmarks) => {
-               // Sort based on semanticSearch returned order
-               const sortedBookmarks = fullBookmarks.sort((a,b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-               renderBookmarks(sortedBookmarks);
+            
+            // Use individual promises to handle missing IDs without failing the whole batch
+            const bookmarkPromises = ids.map(id => 
+              chrome.bookmarks.get(id).catch(() => null)
+            );
+            
+            Promise.all(bookmarkPromises).then(results => {
+              // results is an array of arrays (since get returns a list), or null if failed
+              const fullBookmarks = results.filter(Boolean).flat();
+              
+              if (fullBookmarks.length === 0) {
+                renderBookmarks([]);
+                return;
+              }
+              
+              // Sort based on semanticSearch returned order
+              const sortedBookmarks = fullBookmarks.sort((a,b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+              renderBookmarks(sortedBookmarks);
             });
           } catch(err) {
             console.error("Semantic search failed", err);
