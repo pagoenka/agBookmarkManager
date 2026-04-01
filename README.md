@@ -9,9 +9,9 @@ A modern, fast, and uncluttered Chrome Extension for bookmark management, superc
 
 - **Blazing Fast Native UI**: Replaces the clunky default Chrome bookmark manager with a refined, customizable dashboard.
 - **Intent Tags & Collections**: Categorize bookmarks with visual badges (e.g. `Read Later`, `Reference`, `Archive`).
-- **In-Browser Semantic Intelligence**: Built-in AI runs `@xenova/transformers` natively using WebAssembly to generate embeddings, allowing natural language search queries (e.g., "javascript graphing libraries") without relying on exact keyword matches.
+- **In-Browser Semantic Intelligence**: Built-in AI runs `@xenova/transformers` natively using WebAssembly with the **`Xenova/all-MiniLM-L6-v2`** model. It generates embeddings locally using the bookmark's **Title and URL** to find similarity, allowing natural language search queries (e.g., "javascript graphing libraries") without relying on exact keyword matches.
 - **Privacy First Offline Processing**: All embedding modeling runs entirely locally on your device within an Offscreen Document and stores data incrementally in IndexedDB. Your browsing data never leaves your browser!
-- **Local API Support** (To Be Done): Easily toggle processing loads over to Ollama or standard OpenAI compatible `/v1/embeddings` models if you'd prefer to integrate a localized or self-hosted backend.
+- **Local API Support** (To Be Done): Easily toggle processing loads over to Ollama or standard OpenAI compatible `/v1/embeddings` models (e.g., using **`nomic-embed-text`**) if you'd prefer to integrate a localized or self-hosted backend. In this mode, the extension is designed to support full-page text extraction for even more accurate semantic matching.
 
 ## Installation
 
