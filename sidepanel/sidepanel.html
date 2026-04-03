@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>agBookmarkManager - Knowledge Map</title>
+  <link rel="stylesheet" href="../styles/shared.css">
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="sidepanel-container">
+    <header class="sidepanel-header">
+      <div class="flex items-center gap-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <h1 class="text-md">Knowledge Clusters</h1>
+      </div>
+      <div class="status-indicator" id="clustering-status">Ready</div>
+    </header>
+
+    <div class="view-switcher flex gap-xs">
+      <button id="view-map-btn" class="btn btn-sm active">Map View</button>
+      <button id="view-list-btn" class="btn btn-sm">Topic List</button>
+    </div>
+
+    <div class="main-content">
+      <!-- 2D Map View -->
+      <div id="map-container" class="map-view">
+        <div id="graph-canvas-container">
+           <svg id="graph-svg"></svg>
+        </div>
+        <div class="map-actions flex gap-sm">
+           <button id="btn-zoom-in" class="btn btn-icon btn-sm">+</button>
+           <button id="btn-zoom-out" class="btn btn-icon btn-sm">-</button>
+           <button id="btn-reset" class="btn btn-icon btn-sm">⟲</button>
+        </div>
+
+        <!-- Empty State for Map -->
+        <div id="map-empty-state" class="hidden flex items-center justify-center" style="position: absolute; inset: 0; padding: 32px; text-align: center; flex-direction: column; background: var(--bg-main);">
+          <div style="font-size: 48px; margin-bottom: 16px;">🗺️</div>
+          <h3 class="text-lg font-medium">Knowledge Map</h3>
+          <p class="text-sm text-muted" style="max-width: 240px; margin: 8px 0 24px 0;">We group your bookmarks by semantic similarity. This requires your bookmarks to be indexed first.</p>
+          <button id="btn-generate-clusters" class="btn btn-primary">Generate My Map</button>
+        </div>
+      </div>
+
+      <!-- Topic List View -->
+      <div id="list-container" class="list-view hidden">
+        <div id="cluster-list" class="flex flex-col gap-sm">
+          <!-- Clusters rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <div id="details-overlay" class="details-overlay hidden">
+      <div class="details-content card">
+        <div class="flex justify-between items-start">
+          <h3 id="detail-title" class="text-sm font-semibold">Bookmark Title</h3>
+          <button id="close-details" class="close-btn">&times;</button>
+        </div>
+        <p id="detail-summary" class="text-xs text-muted" style="margin-top: 8px;">No summary available.</p>
+        <div id="detail-tags" class="flex flex-wrap gap-xs" style="margin-top: 12px;"></div>
+        <div class="flex gap-sm" style="margin-top: 16px;">
+          <a id="detail-link" href="#" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; text-align: center;">Open</a>
+          <button id="detail-move-btn" class="btn btn-sm">Move to Folder</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../scripts/vendor/d3.v7.min.js"></script>
+  <script type="module" src="sidepanel.js"></script>
+</body>
+</html>

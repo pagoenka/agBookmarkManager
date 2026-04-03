@@ -2,6 +2,7 @@
 import { generateEmbedding, generateSummary, suggestTags } from './llm.js';
 import { saveEmbedding, getEmbedding } from './db.js';
 import { fetchPageContent, parseHTMLOffline } from './extractor.js';
+import { startClustering } from './clustering.js';
 
 let queue = [];
 let processing = false;
@@ -50,8 +51,10 @@ export function addToQueue(bookmark) {
     queue.push(bookmark);
   }
   
-  // Update total tracker in a simple way
-  if (totalItems < queue.length) totalItems = queue.length;
+  // Update total tracker correctly
+  if (totalItems < processedItems + queue.length) {
+      totalItems = processedItems + queue.length;
+  }
 
   if (!processing && !isPaused) {
     processedItems = 0;
@@ -62,7 +65,11 @@ export function addToQueue(bookmark) {
 export async function processQueue() {
   if (processing || queue.length === 0 || isPaused) return;
   processing = true;
-  if (totalItems < queue.length) totalItems = queue.length;
+  
+  if (totalItems < processedItems + queue.length) {
+      totalItems = processedItems + queue.length;
+  }
+  
   console.log(`Starting queue. ${queue.length} items remaining. Total batch: ${totalItems}`);
 
   while(queue.length > 0) {
@@ -138,6 +145,18 @@ export async function processQueue() {
     totalItems = 0;
     processedItems = 0;
     console.log("Queue processing complete.");
+    
+    // Broadcast indexing complete
     chrome.runtime.sendMessage({ action: 'indexComplete' }).catch(() => {});
+
+    // Trigger sequential clustering if enabled
+    chrome.storage.sync.get(['clusteringEnabled'], (res) => {
+        if (res.clusteringEnabled) {
+            console.log("Triggering sequential clustering...");
+            startClustering();
+        } else {
+            console.log("Clustering disabled, skipping topic generation.");
+        }
+    });
   }
 }

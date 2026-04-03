@@ -5,7 +5,8 @@
 
 const DB_NAME = 'agBookmarkManagerDB';
 const STORE_NAME = 'embeddings';
-const DB_VERSION = 1;
+const CLUSTERS_STORE_NAME = 'clusters';
+const DB_VERSION = 2;
 
 let _db = null;
 
@@ -24,10 +25,54 @@ async function initDB() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        // We'll use the bookmark ID as the keyPath
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
       }
+      if (!db.objectStoreNames.contains(CLUSTERS_STORE_NAME)) {
+        db.createObjectStore(CLUSTERS_STORE_NAME, { keyPath: 'id' });
+      }
     };
+  });
+}
+
+/**
+ * Save computed clusters to DB
+ * @param {Array} clusters - Array of { id, name, bookmarkIds }
+ */
+export async function saveClusterData(clusters) {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([CLUSTERS_STORE_NAME], 'readwrite');
+    const store = transaction.objectStore(CLUSTERS_STORE_NAME);
+    
+    // Clear existing clusters first
+    store.clear();
+    
+    let count = 0;
+    if (clusters.length === 0) resolve();
+    
+    clusters.forEach(cluster => {
+      const request = store.put(cluster);
+      request.onsuccess = () => {
+        count++;
+        if (count === clusters.length) resolve();
+      };
+      request.onerror = (e) => reject(e.target.error);
+    });
+  });
+}
+
+/**
+ * Get all computed clusters
+ */
+export async function getClusterData() {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([CLUSTERS_STORE_NAME], 'readonly');
+    const store = transaction.objectStore(CLUSTERS_STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = (event) => resolve(event.target.result || []);
+    request.onerror = (event) => reject(event.target.error);
   });
 }
 

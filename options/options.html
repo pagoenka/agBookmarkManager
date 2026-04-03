@@ -45,6 +45,12 @@
             <polygon points="5 3 19 12 5 21 5 3"></polygon>
           </svg>
         </button>
+        <button id="open-map" class="btn btn-icon" title="Open Knowledge Map">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </button>
         <button id="ai-settings-btn" class="btn btn-icon" title="AI Settings">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -204,6 +210,23 @@
       </div>
 
       <div style="border-top: 1px solid var(--border); padding-top: 16px;">
+        <h3 class="section-title" style="margin-bottom: 12px; font-size: 14px;">Topic Clustering</h3>
+        <label class="flex items-center gap-sm" style="cursor: pointer; font-size: 13px;">
+          <input type="checkbox" id="clustering-enabled-checkbox">
+          <span>Enable Topic Clustering (Knowledge Maps)</span>
+        </label>
+        <div id="clustering-settings-container" class="hidden" style="margin-top: 12px; margin-left: 24px;">
+           <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 12px;">Clustering Sensitivity</label>
+           <div class="flex items-center gap-sm">
+             <span style="font-size: 10px; color: var(--muted);">Broad</span>
+             <input type="range" id="clustering-strength-slider" min="1" max="100" value="50" style="flex: 1;">
+             <span style="font-size: 10px; color: var(--muted);">Specific</span>
+           </div>
+           <span style="font-size: 11px; color: var(--muted); display: block; margin-top: 4px;">Higher sensitivity creates more specific clusters but may leave some bookmarks as "noise".</span>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px;">
         <h3 class="section-title" style="margin-bottom: 12px; font-size: 14px;">Privacy & Indexing</h3>
         <label class="flex items-center gap-sm" style="cursor: pointer; font-size: 13px;">
           <input type="checkbox" id="auto-index-checkbox">

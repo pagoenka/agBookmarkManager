@@ -6,6 +6,7 @@ import { flattenBookmarks } from '../scripts/utils.js';
 import { deleteBookmarkMeta } from '../scripts/storage.js';
 import { testEndpoint } from '../scripts/llm.js';
 import { ensureOffscreenDocument } from '../scripts/offscreen-manager.js';
+import { startClustering } from '../scripts/clustering.js';
 
 console.log("agBookmarkManager: Background Service Worker Started.");
 
@@ -19,20 +20,30 @@ chrome.runtime.onInstalled.addListener(async (details) => {
       aiProvider: 'browser',
       aiEndpoint: 'http://127.0.0.1:11434/v1/embeddings',
       aiModelEmbed: 'nomic-embed-text',
-      aiModelChat: 'llama3'
+      aiModelChat: 'llama3',
+      clusteringEnabled: false,
+      clusteringStrength: 50
     });
     
     chrome.storage.local.set({
-      isAutoIndexEnabled: true
+      isAutoIndexEnabled: true,
+      brokenLinks: {} // id -> { status, lastCheck }
     });
     
-    console.log("Default AI settings initialized (AI Mode: Enabled by default).");
-    
-    // NEW: Onboard the user by opening the options page first
+    console.log("Default AI settings initialized.");
     chrome.tabs.create({ url: 'options/options.html?onboarding=true' });
-  } else {
-    // Only auto-index on updates/startup, not on clean install (options page will handle it)
-    await queueAllUnprocessedBookmarks();
+  }
+
+  // Set up periodic health check (e.g., every 24 hours)
+  chrome.alarms.create('linkHealthCheck', { periodInMinutes: 1440 });
+  
+  await queueAllUnprocessedBookmarks();
+});
+
+// Trigger health check on alarm
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'linkHealthCheck') {
+    checkAllLinkHealth();
   }
 });
 
@@ -100,6 +111,62 @@ async function queueAllUnprocessedBookmarks() {
   });
 }
 
+async function checkAllLinkHealth() {
+  console.log("Starting Link Health Check...");
+  const { brokenLinks = {} } = await chrome.storage.local.get(['brokenLinks']);
+  
+  chrome.bookmarks.getTree(async (tree) => {
+    const allBookmarks = flattenBookmarks(tree);
+    const newBrokenLinks = { ...brokenLinks };
+    
+    // Process in small batches to avoid network congestion
+    const batchSize = 10;
+    for (let i = 0; i < allBookmarks.length; i += batchSize) {
+      const batch = allBookmarks.slice(i, i + batchSize);
+      await Promise.all(batch.map(async (bm) => {
+        try {
+          const isOk = await checkUrlHealth(bm.url);
+          if (!isOk) {
+            newBrokenLinks[bm.id] = { status: 'broken', lastCheck: Date.now() };
+          } else {
+            delete newBrokenLinks[bm.id];
+          }
+        } catch (err) {
+            // Probably timeout or network err
+            newBrokenLinks[bm.id] = { status: 'unreachable', lastCheck: Date.now() };
+        }
+      }));
+      // Polite delay between batches
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    
+    await chrome.storage.local.set({ brokenLinks: newBrokenLinks });
+    console.log(`Link Health Check Complete. ${Object.keys(newBrokenLinks).length} broken links found.`);
+  });
+}
+
+/**
+ * Perform a lightweight HEAD request to check if a URL is still alive
+ */
+async function checkUrlHealth(url) {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+    
+    const response = await fetch(url, { 
+      method: 'HEAD', 
+      signal: controller.signal,
+      mode: 'no-cors' // Allow checking across origins
+    });
+    
+    clearTimeout(timeoutId);
+    // If it's no-cors, we can't see status, but if it didn't throw it's probably okay
+    return true; 
+  } catch (err) {
+    return false;
+  }
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getStatus' || request.action === 'getProgress') {
     // Allows Options page to ask for queue status
@@ -139,5 +206,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'resumeIndexing') {
     setPauseState(false);
     sendResponse({ success: true });
+  } else if (request.action === 'runHealthCheck') {
+    checkAllLinkHealth();
+    sendResponse({ success: true });
+  } else if (request.action === 'startClustering') {
+    startClustering();
+    sendResponse({ started: true });
   }
 });

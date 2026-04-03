@@ -83,11 +83,18 @@ function createBookmarkElement(bookmark, meta = { tags: [], intent: null }, onDe
   }
 
   // Render Pills (Phase 2)
-  if ((meta.tags && meta.tags.length > 0) || meta.intent) {
-    const pillContainer = document.createElement('div');
-    pillContainer.className = 'pill-container';
-    
-    if (meta.intent) {
+    if ((meta.tags && meta.tags.length > 0) || meta.intent || meta.health) {
+      const pillContainer = document.createElement('div');
+      pillContainer.className = 'pill-container';
+      
+      if (meta.health) {
+        const healthPill = document.createElement('span');
+        healthPill.className = `pill ${meta.health.status}`;
+        healthPill.textContent = (meta.health.status === 'broken' ? 'BROKEN' : 'OFFLINE');
+        pillContainer.appendChild(healthPill);
+      }
+
+      if (meta.intent) {
       const intentPill = document.createElement('span');
       // e.g., "read-later" -> "intent-read-later"
       intentPill.className = `pill intent intent-${meta.intent.replace(' ', '-')}`;
@@ -156,4 +163,48 @@ function createBookmarkElement(bookmark, meta = { tags: [], intent: null }, onDe
   return div;
 }
 
-export { getHostnameLetter, flattenBookmarks, createBookmarkElement };
+async function groupClusterToFolder(clusterName, bookmarkIds) {
+  try {
+    // 1. Get or create "AI Topics" parent folder under "Other Bookmarks" (id: '2')
+    const searchResults = await chrome.bookmarks.search({ title: 'AI Topics' });
+    let parentFolder = searchResults.find(f => !f.url);
+    
+    if (!parentFolder) {
+      parentFolder = await chrome.bookmarks.create({
+        parentId: '2', // Other Bookmarks
+        title: 'AI Topics'
+      });
+    }
+
+    // 2. Check if a folder for this cluster already exists UNDER the AI Topics folder
+    const existingChildren = await chrome.bookmarks.getChildren(parentFolder.id);
+    let clusterFolder = existingChildren.find(f => !f.url && f.title === clusterName);
+
+    if (!clusterFolder) {
+      clusterFolder = await chrome.bookmarks.create({
+        parentId: parentFolder.id,
+        title: clusterName
+      });
+    }
+
+    // 3. Move all bookmarks into it
+    for (const id of bookmarkIds) {
+      try {
+        const bm = await chrome.bookmarks.get(id);
+        // Only move if not already in the target folder
+        if (bm && bm[0] && bm[0].parentId !== clusterFolder.id) {
+          await chrome.bookmarks.move(id, { parentId: clusterFolder.id });
+        }
+      } catch (err) {
+        console.warn(`Failed to move bookmark ${id}:`, err);
+      }
+    }
+
+    return clusterFolder;
+  } catch (err) {
+    console.error("Critical error in groupClusterToFolder:", err);
+    throw err;
+  }
+}
+
+export { getHostnameLetter, flattenBookmarks, createBookmarkElement, groupClusterToFolder };

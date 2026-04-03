@@ -12,7 +12,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Fetch and render initial bookmarks
-  await renderBookmarks();
 
   // Handle Search
   searchInput.addEventListener('input', async (e) => {
@@ -46,11 +45,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Fetch metadata
     const ids = bookmarksList.filter(b => b.url).map(b => b.id);
     const metaMap = await getBookmarksMeta(ids);
+    const { brokenLinks = {} } = await chrome.storage.local.get(['brokenLinks']);
 
     const fragment = document.createDocumentFragment();
     bookmarksList.forEach(bookmark => {
       if (bookmark.url) { 
-        const meta = metaMap[bookmark.id];
+        const meta = { ...(metaMap[bookmark.id] || { tags: [], intent: null }) };
+        
+        if (brokenLinks[bookmark.id]) {
+          meta.health = brokenLinks[bookmark.id];
+        }
+
         // Only providing meta; onDelete and onEdit are omitted/null for the popup context
         const el = createBookmarkElement(bookmark, meta);
         fragment.appendChild(el);

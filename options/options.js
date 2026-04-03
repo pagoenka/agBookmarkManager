@@ -14,7 +14,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // AI & Semantic Search UI
   const aiSettingsBtn = document.getElementById('ai-settings-btn');
+  const openMapBtn = document.getElementById('open-map');
   const semanticToggleBtn = document.getElementById('semantic-toggle-btn');
+
+  // Handle Knowledge Map opening
+  if (openMapBtn) {
+    openMapBtn.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab) {
+        // Enable side panel specifically for this tab to avoid global presence
+        await chrome.sidePanel.setOptions({
+          tabId: tab.id,
+          path: 'sidepanel/sidepanel.html',
+          enabled: true
+        });
+        chrome.sidePanel.open({ tabId: tab.id });
+      }
+    });
+  }
   const indexProgress = document.getElementById('index-progress');
   const pauseResumeBtn = document.getElementById('pause-resume-btn');
   const pauseIcon = document.getElementById('pause-icon');
@@ -34,7 +51,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Automatically trigger AI settings for first-time setup
     setTimeout(() => {
       aiModal.classList.remove('hidden');
-      if (onboardingWelcome) onboardingWelcome.classList.remove('hidden');
+      if (onboardingWelcome) {
+        onboardingWelcome.classList.remove('hidden');
+        onboardingWelcome.innerHTML = `
+          <p style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Welcome to agBookmarkManager! ✨</p>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px;">Choose your AI strategy to start indexing. <b>Browser Mode</b> is 100% private. <b>Local Mode</b> provides the best summaries.</p>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;"><b>Recommended:</b> Enable <b>Topic Clustering</b> below to automatically organize your bookmarks into visual maps!</p>
+        `;
+      }
       if (aiModalTitle) aiModalTitle.textContent = 'Welcome! Initial AI Setup';
       
       // Clear the onboarding flag from URL so it doesn't reappear on reload
@@ -46,6 +70,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const aiModelChatInput = document.getElementById('ai-model-chat-input');
   const aiApiKeyInput = document.getElementById('ai-api-key-input');
   const autoIndexCheckbox = document.getElementById('auto-index-checkbox');
+  const clusteringEnabledCheckbox = document.getElementById('clustering-enabled-checkbox');
+  const clusteringSettingsContainer = document.getElementById('clustering-settings-container');
+  const clusteringStrengthSlider = document.getElementById('clustering-strength-slider');
   const aiModalCancel = document.getElementById('ai-modal-cancel-btn');
   const aiModalSave = document.getElementById('ai-modal-save-btn');
   const aiTestBtn = document.getElementById('ai-test-connection-btn');
@@ -227,9 +254,29 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       chrome.storage.local.get(['isAutoIndexEnabled'], localRes => {
         autoIndexCheckbox.checked = localRes.isAutoIndexEnabled || false;
-        aiModal.classList.remove('hidden');
+        
+        chrome.storage.sync.get(['clusteringEnabled', 'clusteringStrength'], clusterRes => {
+          clusteringEnabledCheckbox.checked = clusterRes.clusteringEnabled || false;
+          clusteringStrengthSlider.value = clusterRes.clusteringStrength || 50;
+          
+          if (clusteringEnabledCheckbox.checked) {
+            clusteringSettingsContainer.classList.remove('hidden');
+          } else {
+            clusteringSettingsContainer.classList.add('hidden');
+          }
+          
+          aiModal.classList.remove('hidden');
+        });
       });
     });
+  });
+
+  clusteringEnabledCheckbox.addEventListener('change', () => {
+    if (clusteringEnabledCheckbox.checked) {
+      clusteringSettingsContainer.classList.remove('hidden');
+    } else {
+      clusteringSettingsContainer.classList.add('hidden');
+    }
   });
 
   aiModalCancel.addEventListener('click', () => {
@@ -243,9 +290,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newModelChat = aiModelChatInput.value;
     const newApiKey = aiApiKeyInput.value;
 
-    chrome.storage.sync.get(['aiProvider', 'aiEndpoint'], async (res) => {
+    chrome.storage.sync.get(['aiProvider', 'aiEndpoint', 'clusteringEnabled', 'clusteringStrength'], async (res) => {
       const providerChanged = res.aiProvider !== newProvider;
       const endpointChanged = res.aiEndpoint !== newEndpoint;
+      
+      const newClusteringEnabled = clusteringEnabledCheckbox.checked;
+      const newClusteringStrength = parseInt(clusteringStrengthSlider.value);
+      const clusteringChanged = res.clusteringEnabled !== newClusteringEnabled || res.clusteringStrength !== newClusteringStrength;
 
       if (providerChanged || endpointChanged) {
         const confirmSwitch = confirm('Switching AI providers or endpoints will make your current search index incompatible. Would you like to clear the current index and prepare for re-indexing?');
@@ -260,7 +311,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         aiEndpoint: newEndpoint,
         aiModelEmbed: newModelEmbed,
         aiModelChat: newModelChat,
-        aiApiKey: newApiKey
+        aiApiKey: newApiKey,
+        clusteringEnabled: newClusteringEnabled,
+        clusteringStrength: newClusteringStrength
       });
 
       // Save local privacy settings
@@ -269,12 +322,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, () => {
         aiModal.classList.add('hidden');
         
-        // Trigger background processing immediately
-        chrome.runtime.sendMessage({ action: 'startProcessing' }, (resp) => {
-          console.log("Indexing started:", resp);
-          alert('AI Settings Saved! Indexing has started in the background.');
-          location.reload();
-        });
+        if (providerChanged || endpointChanged) {
+          // Trigger background processing immediately
+          chrome.runtime.sendMessage({ action: 'startProcessing' }, (resp) => {
+            console.log("Indexing started:", resp);
+            alert('AI Settings Saved! Indexing has started in the background.');
+            location.reload();
+          });
+        } else if (clusteringChanged && newClusteringEnabled) {
+          // Only trigger clustering update
+          chrome.runtime.sendMessage({ action: 'startClustering' }, () => {
+             console.log("Re-clustering started with new parameters.");
+             alert('Clustering settings saved. Knowledge Map is regenerating in the background.');
+          });
+        }
       });
     });
   });
@@ -339,8 +400,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Use stored pause state if available, otherwise from message
     const paused = typeof state.isPaused !== 'undefined' ? state.isPaused : isIndexPaused;
     
-    const percent = state.total > 0 ? Math.round((state.processed / state.total) * 100) : 
+    let percent = state.total > 0 ? Math.round((state.processed / state.total) * 100) : 
                    (state.totalItems > 0 ? Math.round((state.processedItems / state.totalItems) * 100) : 0);
+                   
+    percent = Math.min(100, Math.max(0, percent));
     
     const processed = state.processed || state.processedItems || 0;
     const total = state.total || state.totalItems || 0;
@@ -419,6 +482,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Functions -------------------------------------------------------------
+
+  // Listen for background bookmark changes to keep tree and active folder in sync
+  let sidebarUpdateTimeout = null;
+  function scheduleSidebarUpdate() {
+      if (sidebarUpdateTimeout) clearTimeout(sidebarUpdateTimeout);
+      sidebarUpdateTimeout = setTimeout(async () => {
+          await renderSidebar();
+          // If we haven't selected a special intent view...
+          if (!document.querySelector('.intent-view.active')) {
+            await loadFolderContents(activeFolderId);
+          }
+      }, 500);
+  }
+
+  chrome.bookmarks.onCreated.addListener(scheduleSidebarUpdate);
+  chrome.bookmarks.onRemoved.addListener(scheduleSidebarUpdate);
+  chrome.bookmarks.onMoved.addListener(scheduleSidebarUpdate);
+  chrome.bookmarks.onChanged.addListener(scheduleSidebarUpdate);
 
   async function renderSidebar() {
     foldersContainer.innerHTML = '';
@@ -517,6 +598,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       emptyState.classList.add('hidden');
       
+      const { brokenLinks = {} } = await chrome.storage.local.get(['brokenLinks']);
+
       // Fetch metadata for all these bookmarks at once
       const ids = bookmarks.map(b => b.id);
       const metaMap = await getBookmarksMeta(ids);
@@ -530,6 +613,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const enrichedMeta = { ...meta };
         if (dbEntry && dbEntry.summary) {
           enrichedMeta.summary = dbEntry.summary;
+        }
+
+        // Add Health Info (Phase 5)
+        if (brokenLinks[bm.id]) {
+          enrichedMeta.health = brokenLinks[bm.id];
         }
 
         // use onDelete callback to remove from UI and show empty state if needed
