@@ -159,7 +159,13 @@
   <!-- AI Settings Modal -->
   <div id="ai-settings-modal" class="modal-overlay hidden">
     <div class="modal-content">
-      <h2 class="modal-title">AI Settings</h2>
+      <h2 class="modal-title" id="ai-modal-title">AI Settings</h2>
+      
+      <!-- Onboarding Welcome Header -->
+      <div id="onboarding-welcome" class="hidden" style="margin-bottom: 20px; padding: 12px; border-radius: 8px; background: var(--surface-hover); border: 1px solid var(--border);">
+        <p style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Welcome to agBookmarkManager! ✨</p>
+        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">Choose your AI strategy to start indexing. <b>Browser Mode</b> is 100% private and zero-setup. <b>Local Mode</b> provides the best summaries and tags.</p>
+      </div>
 
       <div style="margin-bottom: 16px;">
         <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">AI Provider</label>

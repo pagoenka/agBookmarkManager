@@ -18,20 +18,32 @@ export async function generateEmbedding(bookmark) {
 }
 
 /**
- * Generates a 1-2 sentence summary of the bookmark content
+ * Generates a summary: AI-powered in Local Mode, metadata or sentence extraction in Browser Mode.
  */
 export async function generateSummary(bookmark) {
   const { provider, endpoint, apiKey, modelChat } = await getSettings();
-  if (!bookmark.content || provider !== 'local') return null;
+  if (!bookmark.content) return null;
 
+  // Browser Mode / Fallback: Use Meta Description or first few sentences
+  if (provider === 'browser') {
+    if (bookmark.description && bookmark.description.length > 20) {
+      return bookmark.description.trim();
+    }
+    // Extract first ~160 chars as basic summary
+    return bookmark.content.substring(0, 160).trim() + (bookmark.content.length > 160 ? "..." : "");
+  }
+
+  // Local/Ollama Mode
   try {
     const prompt = `Summarize this page content in 1-2 concise sentences for a bookmark manager. Focus on the main topic or utility:\n\nContent: ${bookmark.content.substring(0, 1500)}`;
     
     const response = await callLocalChatAPI(prompt, endpoint, apiKey, modelChat || 'llama3');
-    return response.trim();
+    return response ? response.trim() : null;
   } catch (err) {
     console.error("LLM: Summary generation failed", err);
-    return null;
+    // Silent fallback to basic summary on error to ensure *something* is stored
+    if (bookmark.description) return bookmark.description.trim();
+    return bookmark.content.substring(0, 160).trim() + (bookmark.content.length > 160 ? "..." : "");
   }
 }
 
@@ -169,30 +181,64 @@ async function callLocalChatAPI(prompt, endpoint, apiKey, model) {
 }
 
 /**
- * Tests connectivity to a local LLM endpoint
+ * Comprehensive test connectivity for both Embedding and Chat endpoints
  */
-export async function testEndpoint(endpoint, apiKey = '') {
-  try {
-    const headers = { 'Content-Type': 'application/json' };
-    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+export async function testEndpoint(endpoint, apiKey = '', modelEmbed = 'nomic-embed-text', modelChat = 'llama3') {
+  const results = {
+    embed: { success: false, error: null },
+    chat: { success: false, error: null }
+  };
 
-    const res = await fetch(endpoint, {
+  // 1. Test Embeddings
+  try {
+    const embedRes = await fetch(endpoint, {
       method: 'POST',
-      headers: headers,
-      body: JSON.stringify({
-        input: "test",
-        model: "nomic-embed-text" // Generic test model
-      })
+      headers: { 
+        'Content-Type': 'application/json',
+        ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
+      },
+      body: JSON.stringify({ input: "test", model: modelEmbed })
+    });
+    
+    if (embedRes.ok) {
+      results.embed.success = true;
+    } else {
+      results.embed.error = `HTTP ${embedRes.status}`;
+    }
+  } catch (err) {
+    results.embed.error = err.message || "Connection refused";
+  }
+
+  // 2. Test Chat/Summarization
+  try {
+    // Derive chat endpoint
+    let chatEndpoint = endpoint.replace('/embeddings', '/chat/completions');
+    if (chatEndpoint === endpoint && endpoint.includes(':11434')) {
+      chatEndpoint = endpoint.replace(/\/[^/]+$/, '/api/generate');
+    }
+
+    const testPrompt = "Respond with 'ok'";
+    const body = chatEndpoint.includes('/api/generate') 
+      ? { model: modelChat, prompt: testPrompt, stream: false } 
+      : { model: modelChat, messages: [{role: 'user', content: testPrompt}] };
+
+    const chatRes = await fetch(chatEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
+      },
+      body: JSON.stringify(body)
     });
 
-    if (res.ok) {
-      const data = await res.json();
-      return { success: true, status: res.status };
+    if (chatRes.ok) {
+      results.chat.success = true;
+    } else {
+      results.chat.error = `HTTP ${chatRes.status} (Check if model '${modelChat}' exists in Ollama)`;
     }
-    
-    // If it's a 404 but the host is up, it might just be the wrong path
-    return { success: false, error: `Endpoint returned status ${res.status}` };
   } catch (err) {
-    return { success: false, error: err.message || "Connection refused" };
+    results.chat.error = err.message || "Connection refused";
   }
+
+  return results;
 }

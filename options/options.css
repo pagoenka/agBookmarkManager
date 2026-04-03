@@ -79,13 +79,13 @@ body, html {
 .folder-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
   padding: 8px var(--spacing-sm);
   border-radius: var(--radius-sm);
   cursor: pointer;
   color: var(--text-main);
   transition: background 0.2s, color 0.2s;
   font-size: 14px;
+  position: relative;
 }
 
 .folder-item:hover {
@@ -115,6 +115,7 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-left: auto; /* Push to the far right */
 }
 
 .folder-item:hover .folder-delete-btn {

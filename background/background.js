@@ -27,9 +27,13 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     });
     
     console.log("Default AI settings initialized (AI Mode: Enabled by default).");
+    
+    // NEW: Onboard the user by opening the options page first
+    chrome.tabs.create({ url: 'options/options.html?onboarding=true' });
+  } else {
+    // Only auto-index on updates/startup, not on clean install (options page will handle it)
+    await queueAllUnprocessedBookmarks();
   }
-
-  await queueAllUnprocessedBookmarks();
 });
 
 // Also trigger on startup
@@ -80,8 +84,9 @@ async function queueAllUnprocessedBookmarks() {
         // 1. If it's completely missing
         const isMissing = !existing;
         
-        // 2. If it has an embedding but is missing Phase 4 insights (and we are in a mode that supports them)
-        const isMissingInsights = existing && !existing.summary && provider === 'local';
+        // 2. If it has an embedding but is missing intelligence (summary)
+        // We backfill for any provider now that browser mode has a basic fallback
+        const isMissingInsights = existing && !existing.summary;
         
         if ((isMissing || isMissingInsights) && bm.url) {
           toProcess.push(bm);
@@ -123,7 +128,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     sendResponse({ success: true });
   } else if (request.action === 'testConnection') {
-    testEndpoint(request.endpoint, request.apiKey)
+    const { endpoint, apiKey, modelEmbed, modelChat } = request;
+    testEndpoint(endpoint, apiKey, modelEmbed, modelChat)
       .then(res => sendResponse(res))
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true; // async

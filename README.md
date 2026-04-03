@@ -44,6 +44,25 @@ Choose the mode that best fits your needs:
 
 ---
 
+## 🤖 Deep Dive: AI Models
+
+agBookmarkManager uses a "Dual-Model" approach to provide both speed and intelligence.
+
+### 1. The Embedding Model (The "Search Brain")
+*   **Role**: Converts text content into high-dimensional mathematical vectors (embeddings).
+*   **Usage**: Powering **Semantic Search**. It allows you to search by meaning rather than keywords.
+*   **Default (Browser)**: `all-MiniLM-L6-v2` — Small, fast, and runs 100% locally in your browser.
+*   **Advanced (Ollama)**: `nomic-embed-text` — High-performance model that indexes the *full body text* of your bookmarks.
+
+### 2. The Chat Model (The "Summarizer Brain")
+*   **Role**: Reads and understands the actual language of the page.
+*   **Usage**: Powering **Summaries**, **Smart Tags**, and **Intent Detection**.
+*   **Default (Browser)**: Basic extraction (uses meta-descriptions and top sentences).
+*   **Advanced (Ollama)**: `llama3`, `mistral`, or `phi3`. These models "read" the page and write concise summaries for you.
+*   **Note**: This requires a Local LLM setup (like Ollama) for the best results.
+
+---
+
 ## 🛠️ Setup Guide
 
 ### 1. Installation

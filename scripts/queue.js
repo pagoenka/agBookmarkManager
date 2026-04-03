@@ -95,13 +95,20 @@ export async function processQueue() {
         const summary = await generateSummary(bm);
         const suggestedTags = await suggestTags(bm);
 
+        // SAFE MERGE: Only overwrite if we got a valid result, otherwise keep the old one
+        // This prevents "disappearing" summaries if Ollama is busy/unreachable
+        const finalSummary = summary || (existing ? existing.summary : null);
+        const finalTags = (suggestedTags && suggestedTags.length > 0) 
+          ? suggestedTags 
+          : (existing ? (existing.suggestedTags || []) : []);
+
         await saveEmbedding(bm.id, {
           embedding: result.embedding,
           text: result.text,
           title: bm.title,
           url: bm.url,
-          summary: summary,
-          suggestedTags: suggestedTags,
+          summary: finalSummary,
+          suggestedTags: finalTags,
           contentCache: bm.content // Store extracted text for reference
         });
       }

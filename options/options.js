@@ -22,7 +22,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // AI Modal Elements
   const aiModal = document.getElementById('ai-settings-modal');
+  const aiModalTitle = document.getElementById('ai-modal-title');
+  const onboardingWelcome = document.getElementById('onboarding-welcome');
   const aiProviderSelect = document.getElementById('ai-provider-select');
+  
+  // Check for onboarding status
+  const urlParams = new URLSearchParams(window.location.search);
+  const isOnboarding = urlParams.get('onboarding') === 'true';
+
+  if (isOnboarding) {
+    // Automatically trigger AI settings for first-time setup
+    setTimeout(() => {
+      aiModal.classList.remove('hidden');
+      if (onboardingWelcome) onboardingWelcome.classList.remove('hidden');
+      if (aiModalTitle) aiModalTitle.textContent = 'Welcome! Initial AI Setup';
+      
+      // Clear the onboarding flag from URL so it doesn't reappear on reload
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }, 500);
+  }
   const aiEndpointInput = document.getElementById('ai-endpoint-input');
   const aiModelEmbedInput = document.getElementById('ai-model-embed-input');
   const aiModelChatInput = document.getElementById('ai-model-chat-input');
@@ -265,22 +283,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   aiTestBtn.addEventListener('click', async () => {
     const endpoint = aiEndpointInput.value;
     const apiKey = aiApiKeyInput.value;
+    const modelEmbed = aiModelEmbedInput.value;
+    const modelChat = aiModelChatInput.value;
     
     aiTestResult.textContent = 'Testing connection...';
     aiTestResult.style.color = 'var(--text-muted)';
     
-    chrome.runtime.sendMessage({ action: 'testConnection', endpoint, apiKey }, (result) => {
-      if (result && result.success) {
-        aiTestResult.textContent = '✓ Connection successful!';
-        aiTestResult.style.color = 'var(--success)';
+    chrome.runtime.sendMessage({ action: 'testConnection', endpoint, apiKey, modelEmbed, modelChat }, (results) => {
+      if (results && results.embed) {
+        let msg = '';
+        if (results.embed.success && results.chat.success) {
+          msg = '✅ All systems go! Search and Summaries work.';
+          aiTestResult.style.color = 'var(--success)';
+        } else {
+          msg += results.embed.success ? '✓ Search OK. ' : '✗ Search Failed. ';
+          msg += results.chat.success ? '✓ Summaries OK.' : '✗ Summaries Failed.';
+          aiTestResult.style.color = results.embed.success ? '#f59e0b' : '#ef4444'; // Amber or Red
+        }
+        aiTestResult.textContent = msg;
       } else {
-        const err = result ? result.error : 'Unknown error';
+        const err = results ? results.error : 'Unknown error';
         aiTestResult.textContent = `✗ Failed: ${err}`;
         aiTestResult.style.color = '#ef4444';
-        
-        if (err.includes('403')) {
-          aiTestResult.innerHTML += `<br/><span style="color: var(--text-muted); font-size: 10px;">Ollama might need OLLAMA_ORIGINS="chrome-extension://*" set.</span>`;
-        }
       }
     });
   });
@@ -432,13 +456,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       fDiv.style.paddingLeft = `${Math.max(8, folder.depth * 16)}px`;
       
       fDiv.innerHTML = `
-        <div class="flex items-center gap-sm flex-1">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <div class="flex items-center gap-sm" style="overflow: hidden; flex: 1;">
+          <svg style="flex-shrink: 0;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
           </svg>
-          <span>${titleStr}</span>
+          <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${titleStr}</span>
         </div>
-        <button class="folder-delete-btn" title="Delete Folder">
+        <button class="folder-delete-btn" title="Delete Folder" style="flex-shrink: 0; margin-left: 12px;">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
         </button>
       `;

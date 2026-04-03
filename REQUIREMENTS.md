@@ -17,9 +17,31 @@ A Chrome Extension that serves as a full-featured bookmark manager. Users can vi
 | Phase | Title | Status |
 |-------|-------|--------|
 | Phase 1 | Chrome Extension — Core Bookmark Manager | ✅ Completed |
-| Phase 2 | Tags, Intent Tags, and Collections | 🟡 In Progress |
-| Phase 3 | AI-Powered Search and Intelligence | 🟡 In Progress |
-| Phase 4 | Deep Content Intelligence | ⏳ Planned |
+| Phase 2 | Tags, Intent Tags, and Collections | ✅ Completed |
+| Phase 3 | AI-Powered Search and Intelligence | ✅ Completed |
+| Phase 4 | Deep Content Intelligence | ✅ Completed |
+| Phase 5 | Knowledge Synthesis & Visualization | 🟡 In Progress |
+
+## Phase 5 — Knowledge Synthesis & Visualization
+
+### Goal
+Shift from individual bookmark management to holistic organization through automated clustering, enabling users to visualize their interests and quickly restructure their bookmark hierarchy.
+
+### Features
+1. **Topic Clustering**: Automatically group bookmarks into "Knowledge Maps" or clusters based on semantic similarity (using embeddings from Phase 4), helping users identify thematic overlap across their library.
+2. **Bulk Grouping to Folders**: Provide a one-click option to move all bookmarks within a detected cluster into a new or existing Chrome Bookmark Folder, streamlining reorganization.
+3. **Cluster Visualization**: A dedicated "Map View" (e.g., force-directed graph or bubble chart) that shows how bookmarks relate to each other, with the ability to click any cluster to see the included links.
+4. **Side Panel Interface**: Port the management UI to the Chrome Side Panel API to allow persistent access to clustering and organizational tools while browsing.
+5. **Maintenance & Health**: Automated background verification for broken links (404s) and semantic deduplication of redundant saves.
+
+### Technical Considerations
+- **Clustering Algorithms**: Implementation of client-side clustering (e.g., K-Means or DBSCAN) on vector embeddings.
+- **Chrome Bookmarks API**: Use `chrome.bookmarks.move` and `chrome.bookmarks.create` for the bulk grouping feature.
+- **Visualization**: Use a lightweight charting library (e.g., D3.js or simple Canvas) to render the Knowledge Map without performance lag.
+- **Batch Processing**: Ensure bulk moving of hundreds of bookmarks is handled gracefully to avoid browser UI freezes.
+
+---
+
 ## Phase 4 — Deep Content Intelligence
 
 ### Goal
