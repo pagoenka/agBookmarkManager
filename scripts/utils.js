@@ -29,7 +29,7 @@ function flattenBookmarks(nodes, result = []) {
 /**
  * Renders a single bookmark item DOM node
  */
-function createBookmarkElement(bookmark, meta = { tags: [], intent: null }, onDelete, onEditMetadata) {
+function createBookmarkElement(bookmark, meta = { tags: [], intent: null }, onDelete, onEditMetadata, onMove) {
   const div = document.createElement('div');
   div.className = 'bookmark-item';
   div.dataset.id = bookmark.id;
@@ -154,6 +154,17 @@ function createBookmarkElement(bookmark, meta = { tags: [], intent: null }, onDe
     div.remove();
   });
 
+  // Move to Folder button
+  const moveBtn = document.createElement('button');
+  moveBtn.className = 'btn btn-icon';
+  moveBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><polyline points="9 14 12 17 15 14"></polyline></svg>`;
+  moveBtn.title = 'Move to Folder';
+  moveBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (onMove) onMove(bookmark);
+  });
+
+  actions.appendChild(moveBtn);
   actions.appendChild(tagBtn);
   actions.appendChild(delBtn);
 

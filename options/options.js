@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pauseResumeBtn) updatePauseResumeUI();
   });
 
-  // Modal Elements
+  // Tagging Modal Elements
   const modal = document.getElementById('tag-modal');
   const modalIntent = document.getElementById('modal-intent');
   const modalTags = document.getElementById('modal-tags');
@@ -98,6 +98,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modalCancel = document.getElementById('modal-cancel-btn');
   const modalSave = document.getElementById('modal-save-btn');
   let currentlyEditingBookmarkId = null;
+
+  // Move Modal Elements
+  const moveModal = document.getElementById('move-modal');
+  const moveFolderSelect = document.getElementById('move-folder-select');
+  const moveCancelBtn = document.getElementById('move-cancel-btn');
+  const moveSaveBtn = document.getElementById('move-save-btn');
+  let bookmarkToMove = null;
 
   let activeFolderId = '1'; // Default: Bookmarks Bar
 
@@ -241,6 +248,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Quick refresh of the current view to show new tags
     const activeSidebar = document.querySelector('.sidebar .active');
     if (activeSidebar) activeSidebar.click();
+  });
+
+  // Move Modal Logic
+  moveCancelBtn.addEventListener('click', () => {
+    moveModal.classList.add('hidden');
+    bookmarkToMove = null;
+  });
+
+  moveSaveBtn.addEventListener('click', async () => {
+    if (!bookmarkToMove || !moveFolderSelect.value) return;
+    try {
+      await chrome.bookmarks.move(bookmarkToMove.id, { parentId: moveFolderSelect.value });
+      moveModal.classList.add('hidden');
+      bookmarkToMove = null;
+      // The bookmark change listener will auto-refresh the view
+
+      // Re-cluster if enabled so Knowledge Map stays accurate
+      chrome.storage.sync.get(['clusteringEnabled'], (res) => {
+        if (res.clusteringEnabled) {
+          chrome.runtime.sendMessage({ action: 'startClustering' }, () => {
+            console.log('Re-clustering triggered after bookmark move.');
+          });
+        }
+      });
+    } catch (err) {
+      console.error('Failed to move bookmark:', err);
+      alert('Could not move the bookmark. It may have been deleted.');
+    }
   });
 
   // AI Settings Modal Logic
@@ -450,6 +485,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  async function openMoveModal(bookmark) {
+    bookmarkToMove = bookmark;
+
+    // Populate folder list
+    moveFolderSelect.innerHTML = '';
+    const [tree] = await chrome.bookmarks.getTree();
+
+    function buildOptions(nodes, depth = 0) {
+      for (const node of nodes) {
+        if (!node.url) { // It's a folder
+          if (node.title || depth > 0) {
+            const prefix = '\u00a0\u00a0'.repeat(depth);
+            const option = document.createElement('option');
+            option.value = node.id;
+            option.textContent = `${prefix}${node.title || 'Bookmarks Bar'}`;
+            moveFolderSelect.appendChild(option);
+          }
+          if (node.children) buildOptions(node.children, depth + 1);
+        }
+      }
+    }
+
+    buildOptions(tree.children);
+    moveModal.classList.remove('hidden');
+  }
+
   async function openEditModal(bookmark, currentMeta) {
     currentlyEditingBookmarkId = bookmark.id;
     modalIntent.value = currentMeta.intent || '';
@@ -622,10 +683,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // use onDelete callback to remove from UI and show empty state if needed
         const el = createBookmarkElement(bm, enrichedMeta, (deletedId) => {
-        if (bookmarksContainer.children.length === 1) {
-          emptyState.classList.remove('hidden');
-        }
-      }, openEditModal);
+          if (bookmarksContainer.children.length === 1) {
+            emptyState.classList.remove('hidden');
+          }
+        }, openEditModal, openMoveModal);
         
         fragment.appendChild(el);
       }

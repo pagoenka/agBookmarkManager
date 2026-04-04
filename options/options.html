@@ -246,6 +246,26 @@
     </div>
   </div>
 
+  <!-- Move Folder Modal -->
+  <div id="move-modal" class="modal-overlay hidden">
+    <div class="modal-content text-center">
+      <h2 class="modal-title" style="margin-bottom: 16px;">Move Bookmark</h2>
+      <p style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">Select a destination folder for this bookmark.</p>
+      
+      <div style="margin-bottom: 24px; text-align: left;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Destination Folder</label>
+        <select id="move-folder-select" class="input" style="width: 100%;">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+
+      <div class="modal-footer flex gap-sm justify-end">
+        <button id="move-cancel-btn" class="btn">Cancel</button>
+        <button id="move-save-btn" class="btn btn-primary">Move Bookmark</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="options.js"></script>
 </body>
 

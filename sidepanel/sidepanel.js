@@ -16,6 +16,9 @@ const detailSummary = document.getElementById('detail-summary');
 const detailTags = document.getElementById('detail-tags');
 const detailLink = document.getElementById('detail-link');
 const detailMoveBtn = document.getElementById('detail-move-btn');
+const detailClusterBanner = document.getElementById('detail-cluster-banner');
+const detailClusterName = document.getElementById('detail-cluster-name');
+const detailClusterCount = document.getElementById('detail-cluster-count');
 const mapEmptyState = document.getElementById('map-empty-state');
 const btnGenerateClusters = document.getElementById('btn-generate-clusters');
 const graphCanvas = document.getElementById('graph-canvas-container');
@@ -150,20 +153,96 @@ function renderTopicList() {
     return;
   }
 
+  // Build a quick lookup map from bookmark id -> bookmark data
+  const bmMap = {};
+  allBookmarks.forEach(bm => { bmMap[bm.id] = bm; });
+
   currentClusters.forEach(cluster => {
+    const count = cluster.bookmarkIds.length;
+
+    // Resolve up to 3 bookmark titles for the preview
+    const previewBms = cluster.bookmarkIds
+      .map(id => bmMap[id])
+      .filter(Boolean)
+      .slice(0, 3);
+
+    // Collect top tags across the cluster (max 4 shown)
+    const tagCounts = {};
+    cluster.bookmarkIds.forEach(id => {
+      const bm = bmMap[id];
+      if (bm && bm.suggestedTags) {
+        bm.suggestedTags.forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; });
+      }
+    });
+    const topTags = Object.entries(tagCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .map(([tag]) => tag);
+
+    const previewHTML = previewBms.map(bm => {
+      const host = (() => { try { return new URL(bm.url).hostname.replace('www.', ''); } catch { return ''; } })();
+      return `
+        <div class="topic-preview-row">
+          <span class="topic-preview-title">${bm.title || 'Untitled'}</span>
+          ${host ? `<span class="topic-preview-host">${host}</span>` : ''}
+        </div>`;
+    }).join('');
+
+    const remaining = count - previewBms.length;
+    const moreHTML = remaining > 0
+      ? `<div class="topic-preview-more">+${remaining} more bookmark${remaining !== 1 ? 's' : ''}</div>`
+      : '';
+
+    const tagsHTML = topTags.length > 0
+      ? `<div class="topic-tags-row">${topTags.map(t => `<span class="pill topic-tag">#${t}</span>`).join('')}</div>`
+      : '';
+
     const item = document.createElement('div');
     item.className = 'cluster-item';
     item.innerHTML = `
-      <div class="flex justify-between items-center">
-        <h4 class="text-sm font-medium">${cluster.name}</h4>
-        <span class="text-xs bg-surface-hover px-xs rounded">${cluster.bookmarkIds.length} items</span>
+      <div class="cluster-item-header">
+        <div class="cluster-item-title-row">
+          <h4 class="cluster-item-name">${cluster.name}</h4>
+          <span class="cluster-item-count">${count} bookmark${count !== 1 ? 's' : ''}</span>
+        </div>
+        ${tagsHTML}
+      </div>
+      <div class="topic-preview-list">
+        ${previewHTML}
+        ${moreHTML}
+      </div>
+      <div class="cluster-item-actions">
+        <button class="btn btn-sm btn-move-cluster" data-cluster-id="${cluster.id}" title="Move all ${count} bookmarks into a folder named '${cluster.name}'">
+          Move to &ldquo;${cluster.name}&rdquo;
+        </button>
       </div>
     `;
-    item.onclick = () => {
-        // Switch to map and focus cluster? Or just show list?
-        // For now, let's just keep it simple.
-        console.log("Clicked cluster:", cluster.name);
-    };
+
+    // Wire up the move button
+    item.querySelector('.btn-move-cluster').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const confirmed = confirm(
+        `Move ${count} bookmark${count !== 1 ? 's' : ''} into a folder named "${cluster.name}"?\n\n` +
+        `This folder will be created (or reused if it already exists) in your bookmarks.`
+      );
+      if (!confirmed) return;
+      btn.disabled = true;
+      btn.textContent = 'Moving…';
+      try {
+        await groupClusterToFolder(cluster.name, cluster.bookmarkIds);
+        clusteringStatus.textContent = `✓ Moved ${count} to "${cluster.name}"`;
+        setTimeout(() => {
+          clusteringStatus.textContent = `${currentClusters.length} topics identified`;
+        }, 4000);
+        btn.textContent = '✓ Done';
+      } catch (err) {
+        alert('Failed to move bookmarks: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = `Move to "${cluster.name}"`;
+      }
+    });
+
     clusterList.appendChild(item);
   });
 }
@@ -173,12 +252,11 @@ function showBookmarkDetails(bookmark) {
   detailTitle.textContent = bookmark.title;
   detailSummary.textContent = bookmark.summary || "No AI summary generated for this bookmark.";
   detailLink.href = bookmark.url;
-  
+
   detailTags.innerHTML = '';
   if (bookmark.suggestedTags) {
     bookmark.suggestedTags.forEach(tag => {
       const span = document.createElement('span');
-      // Use the global 'pill' class for consistency
       span.className = 'pill';
       span.style.padding = '4px 10px';
       span.style.fontSize = '12px';
@@ -187,9 +265,21 @@ function showBookmarkDetails(bookmark) {
     });
   }
 
-  // Hide move button if it's not in a cluster
+  // Find the cluster this bookmark belongs to
   const cluster = currentClusters.find(c => c.bookmarkIds.includes(bookmark.id));
-  detailMoveBtn.style.display = cluster ? 'block' : 'none';
+
+  if (cluster) {
+    // Show the cluster banner so the user knows exactly where "Move" will go
+    detailClusterName.textContent = cluster.name;
+    detailClusterCount.textContent = `· ${cluster.bookmarkIds.length} bookmark${cluster.bookmarkIds.length !== 1 ? 's' : ''}`;
+    detailClusterBanner.classList.remove('hidden');
+    detailMoveBtn.style.display = 'block';
+    // Keep button label showing the destination folder name
+    detailMoveBtn.textContent = `Move to "${cluster.name}"`;
+  } else {
+    detailClusterBanner.classList.add('hidden');
+    detailMoveBtn.style.display = 'none';
+  }
 
   detailsOverlay.classList.remove('hidden');
 }
@@ -199,27 +289,37 @@ function showBookmarkDetails(bookmark) {
  */
 async function handleMoveCluster() {
   if (!selectedBookmark) return;
-  
+
   const cluster = currentClusters.find(c => c.bookmarkIds.includes(selectedBookmark.id));
   if (!cluster) {
-    alert("This bookmark is not part of a cluster.");
+    alert('This bookmark is not part of a cluster.');
     return;
   }
+
+  const count = cluster.bookmarkIds.length;
+  const confirmed = confirm(
+    `Move ${count} bookmark${count !== 1 ? 's' : ''} into a folder named "${cluster.name}"?\n\n` +
+    `This folder will be created (or reused if it already exists) in your bookmarks.`
+  );
+  if (!confirmed) return;
 
   detailMoveBtn.disabled = true;
   detailMoveBtn.textContent = 'Moving...';
 
   try {
     await groupClusterToFolder(cluster.name, cluster.bookmarkIds);
-    alert(`Successfully moved ${cluster.bookmarkIds.length} bookmarks to '${cluster.name}' folder.`);
     detailsOverlay.classList.add('hidden');
-    // Refresh to show they are moved (though D3 is purely visual representation of DB, 
-    // the bookmarks IDs haven't changed, only their parent in Chrome's internal tree)
+    // Brief non-blocking status feedback via the status indicator
+    clusteringStatus.textContent = `✓ Moved ${count} to "${cluster.name}"`;
+    setTimeout(() => {
+      clusteringStatus.textContent = `${currentClusters.length} topics identified`;
+    }, 4000);
   } catch (err) {
-    alert("Failed to move bookmarks: " + err.message);
+    alert('Failed to move bookmarks: ' + err.message);
   } finally {
     detailMoveBtn.disabled = false;
-    detailMoveBtn.textContent = 'Move to Folder';
+    // Label will be re-set next time showBookmarkDetails is called
+    detailMoveBtn.textContent = 'Move Cluster to Folder';
   }
 }
 

@@ -15,7 +15,13 @@
         </svg>
         <h1 class="text-md">Knowledge Clusters</h1>
       </div>
-      <div class="status-indicator" id="clustering-status">Ready</div>
+      <div class="flex items-center gap-sm">
+        <div class="status-indicator" id="clustering-status">Ready</div>
+        <button id="btn-recluster" class="btn btn-sm btn-recluster" title="Re-run clustering with latest settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          Re-cluster
+        </button>
+      </div>
     </header>
 
     <div class="view-switcher flex gap-xs">
@@ -60,9 +66,18 @@
         </div>
         <p id="detail-summary" class="text-xs text-muted" style="margin-top: 8px;">No summary available.</p>
         <div id="detail-tags" class="flex flex-wrap gap-xs" style="margin-top: 12px;"></div>
-        <div class="flex gap-sm" style="margin-top: 16px;">
+
+        <!-- Cluster context banner: shown only when bookmark is in a cluster -->
+        <div id="detail-cluster-banner" class="cluster-banner hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+          <span class="cluster-banner-label">Cluster: </span>
+          <span id="detail-cluster-name" class="cluster-banner-name">—</span>
+          <span id="detail-cluster-count" class="cluster-banner-count"></span>
+        </div>
+
+        <div class="flex gap-sm" style="margin-top: 12px;">
           <a id="detail-link" href="#" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; text-align: center;">Open</a>
-          <button id="detail-move-btn" class="btn btn-sm">Move to Folder</button>
+          <button id="detail-move-btn" class="btn btn-sm" title="Move all bookmarks in this cluster into a new folder with the cluster name">Move Cluster to Folder</button>
         </div>
       </div>
     </div>
