@@ -23,6 +23,13 @@ When connected to a local LLM (like Ollama), the manager transcends simple stora
 - **Smart Tagging:** AI suggests relevant tags based on the actual content of the page.
 - **Intent Detection:** Automatically categorizes bookmarks into "Read Later", "Reference", or "Archive".
 
+### 🗺️ Knowledge Maps (Topic Clustering)
+Visualize the latent connections in your saved internet!
+- **Interactive Graphs:** View your bookmark space as an interactive node graph powered by D3.js.
+- **Auto-Categorizations:** The DBSCAN AI algorithm automatically semantically groups your unorganized bookmarks into intelligent topics.
+- **Smart Folder Grouping:** One-click organize grouped topics into native browser bookmark folders with duplicate-prevention.
+- **Side Panel Integration:** Access the Knowledge Map from a dedicated side panel that scopes itself per-tab, staying out of your way while browsing other sites.
+
 ### 🛡️ Privacy First
 - **Zero-Cloud:** In Browser Mode, your data never leaves your machine. Processing happens in a secure Offscreen Document.
 - **Incremental Indexing:** Only new or changed bookmarks are processed, saving CPU and battery.
